@@ -5,7 +5,7 @@
 #include<string>
 #include<vector>
 #include<fstream>
-//#include<time.h>
+#include<ctime.h>
 void Com(std::string str) {
     std::ofstream out("bulk" + std::to_string(std::time(0)) + ".log");
     std::cout << str ;
