@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,18 +16,27 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential
+        sudo apt-get install -y g++ build-essential
     
-    - name: Build project
+    - name: Compile project
       run: |
-        chmod +x build.sh
-        ./build.sh
+        mkdir -p release
+        g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
     
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           release/bulk
-        body_path: CHANGELOG.md
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+        name: Release ${{ github.ref_name }}
+        body: |
+          Автоматическая сборка проекта
+          
+          ## Что внутри:
+          - Скомпилированный бинарный файл `bulk`
+          - Поддержка записи логов
+          
+          ## Установка:
+          ```bash
+          chmod +x bulk
+          ./bulk
