@@ -1,13 +1,16 @@
-name: Build
+name: Build and Release
 
 on:
   push:
-    branches: [ main, master ]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v4
@@ -20,10 +23,21 @@ jobs:
     - name: Compile
       run: |
         mkdir -p release
-        g++ -std=c++17 -Iinclude -o release/bulk src/bulk.cpp
+        g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
+        chmod +x release/bulk
     
-    - name: Upload binary
-      uses: actions/upload-artifact@v4
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: bulk
-        path: release/bulk
+        files: release/bulk
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## Релиз ${{ github.ref_name }}
+          
+          ### Исполняемый файл:
+          - `bulk` - скомпилированный бинарный файл для Linux
+          
+          ### Запуск:
+          ```bash
+          chmod +x bulk
+          ./bulk
