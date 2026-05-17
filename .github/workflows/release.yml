@@ -2,6 +2,16 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'build.sh'
+      - 'CMakeLists.txt'
+      - '.github/workflows/release.yml'
+  push:
     tags:
       - 'v*'
   workflow_dispatch:
@@ -9,6 +19,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Важно для создания релиза
     
     steps:
     - uses: actions/checkout@v4
@@ -23,20 +35,22 @@ jobs:
         mkdir -p release
         g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
     
-    - name: Create Release
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bulk-executable
+        path: release/
+    
+    - name: Create Release (if tag exists)
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: |
-          release/bulk
+        files: release/bulk
         name: Release ${{ github.ref_name }}
         body: |
-          Автоматическая сборка проекта
+          Автоматическая сборка после исправлений
           
-          ## Что внутри:
-          - Скомпилированный бинарный файл `bulk`
-          - Поддержка записи логов
-          
-          ## Установка:
-          ```bash
-          chmod +x bulk
-          ./bulk
+          ## Изменения:
+          ${{ github.event.head_commit.message }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
