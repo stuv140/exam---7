@@ -21,10 +21,19 @@ jobs:
         g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
         chmod +x release/bulk
     
+    - name: Create archive
+      run: |
+        cd release
+        zip -r bulk.zip bulk
+        # или tar -czf bulk.tar.gz bulk
+        cd ..
+    
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
-        files: release/bulk
+        files: |
+          release/bulk.zip
+          release/bulk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
