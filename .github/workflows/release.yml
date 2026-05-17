@@ -1,4 +1,4 @@
-name: Build and Release
+name: CMake Build and Release
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
     paths:
       - 'src/**'
       - 'include/**'
+      - 'CMakeLists.txt'
+  workflow_dispatch:
 
 jobs:
   build-and-release:
@@ -21,40 +23,64 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ build-essential
+        sudo apt-get install -y cmake build-essential g++
     
-    - name: Compile
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    
+    - name: Build with CMake
+      run: cmake --build build --config Release --parallel $(nproc)
+    
+    - name: Prepare release files
       run: |
         mkdir -p release
-        g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
+        # Копируем бинарник из папки сборки
+        if [ -f "build/bulk" ]; then
+          cp build/bulk release/
+        elif [ -f "build/Release/bulk" ]; then
+          cp build/Release/bulk release/
+        fi
+        # Создаем контрольную сумму
         sha256sum release/bulk > release/bulk.sha256
     
     - name: Get version
       id: version
       run: |
         echo "VERSION=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+        echo "COMMIT_MSG=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
     
-    - name: Delete old release (optional)
+    - name: Delete old release
       uses: actions/github-script@v7
       with:
         script: |
-          const releases = await github.rest.repos.listReleases({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-          });
-          for (const release of releases.data) {
-            if (release.tag_name === 'latest-build') {
-              await github.rest.repos.deleteRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: release.id,
-              });
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: 'tags/latest-build',
-              });
+          try {
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            
+            for (const release of releases.data) {
+              if (release.tag_name === 'latest-build') {
+                console.log(`Deleting old release: ${release.tag_name}`);
+                await github.rest.repos.deleteRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: release.id,
+                });
+                
+                try {
+                  await github.rest.git.deleteRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: 'tags/latest-build',
+                  });
+                } catch(e) {
+                  console.log('Tag already deleted or not found');
+                }
+              }
             }
+          } catch(e) {
+            console.log('No old release to delete');
           }
     
     - name: Create Release
@@ -66,17 +92,14 @@ jobs:
           release/bulk
           release/bulk.sha256
         body: |
-          ## Автоматическая сборка
-          - **Время**: ${{ steps.version.outputs.VERSION }}
-          - **Коммит**: ${{ github.sha }}
-          - **Автор**: ${{ github.actor }}
+          ## 🚀 Автоматическая CMake сборка
           
-          ### Изменения в этом коммите:
-          ${{ github.event.head_commit.message }}
-          
-          ### Скачать:
-          - `bulk` - исполняемый файл
-          - `bulk.sha256` - контрольная сумма
-        make_latest: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          | Параметр | Значение |
+          |----------|----------|
+          | **Время** | ${{ steps.version.outputs.VERSION }} |
+          | **Коммит** | `${{ github.sha }}` |
+          | **Автор** | ${{ github.actor }} |
+          | **Ветка** | ${{ github.ref_name }} |
+          | **CMake** | 3.10+ |
+          | **C++ Стандарт** | C++17 |
+          | **Оптимизация** | O3 |
