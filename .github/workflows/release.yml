@@ -16,7 +16,7 @@ jobs:
     - name: Compile
       run: |
         mkdir -p release
-        g++ -std=c++17 -O3 -o release/bulk src/bulk.cpp
+        g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
         chmod +x release/bulk
 
     - name: Create archive
@@ -25,7 +25,7 @@ jobs:
         zip -r bulk.zip bulk
         cd ..
 
-    - name: Upload artifacts (for debug)
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: binaries
@@ -38,8 +38,8 @@ jobs:
         files: |
           release/bulk.zip
           release/bulk
-        make_latest: true   # разрешить обновлять latest
-        fail_on_unmatched_files: true   # чтобы явно увидеть, если файлов нет
+        make_latest: true
+        fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  
