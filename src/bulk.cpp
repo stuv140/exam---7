@@ -5,7 +5,7 @@
 #include<fstream>
 #include<ctime>
 #include <thread>
-#include"Command.h"
+#include"command.h"
 
 int main(int argc, char* argv[])
 { 
