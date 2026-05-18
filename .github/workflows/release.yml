@@ -2,32 +2,35 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Compile
       run: |
         mkdir -p release
-        g++ -std=c++17 -O3 -Iinclude -o release/bulk src/bulk.cpp
+        g++ -std=c++17 -O3 -o release/bulk src/bulk.cpp
         chmod +x release/bulk
-    
+
     - name: Create archive
       run: |
         cd release
         zip -r bulk.zip bulk
-        # или tar -czf bulk.tar.gz bulk
         cd ..
-    
+
+    - name: Upload artifacts (for debug)
+      uses: actions/upload-artifact@v4
+      with:
+        name: binaries
+        path: release/
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -35,5 +38,7 @@ jobs:
         files: |
           release/bulk.zip
           release/bulk
+        make_latest: true   # разрешить обновлять latest
+        fail_on_unmatched_files: true   # чтобы явно увидеть, если файлов нет
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
