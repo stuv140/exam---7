@@ -115,19 +115,20 @@ void command::ComOut()
 {
 	int i = 0;
 	std::cout << "bulk: ";
+	std::ofstream out("bulk" + std::to_string(std::time(0)) + ".log");
 	for (const auto& cmd : batch) {
-
-		std::ofstream out("bulk" + std::to_string(std::time(0)) + ".log");
 		std::cout << cmd;
-		out << cmd << std::endl;		
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-		out.close();
+		out << cmd ;		
 		i++;
 		if (i < batch.size()) {
 			std::cout << ", ";
+			out << ", ";
 		}
-		else
+		else {
 			std::cout << std::endl;
-	
+			
+		}
 	}
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	out.close();
 }
